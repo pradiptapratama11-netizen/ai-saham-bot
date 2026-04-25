@@ -11,8 +11,8 @@ from sklearn.ensemble import RandomForestClassifier
 # TELEGRAM FROM GITHUB SECRETS
 ################################
 
-BOT_TOKEN=os.getenv("BOT_TOKEN")
-CHAT_ID=str(os.getenv("CHAT_ID"))
+BOT_TOKEN="8104665909:AAFwSwb0V-XZKm_Fvpu1RIIURr0bquA-SYE"
+CHAT_ID="6839765393"
 import requests
 
 r=requests.post(
