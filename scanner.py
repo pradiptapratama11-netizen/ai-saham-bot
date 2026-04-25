@@ -26,7 +26,7 @@ json={
 print(r.status_code)
 print(r.text)
 
-raise SystemExit
+raise SystemExit("HELLO TEST")
 
 
 def kirim(msg):
