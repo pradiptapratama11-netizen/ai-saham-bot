@@ -291,5 +291,7 @@ for x in strong[:10]:
  msg+=line+"\n"
 
 
+print("sending telegram...")
+print(msg)
 
 kirim(msg)
