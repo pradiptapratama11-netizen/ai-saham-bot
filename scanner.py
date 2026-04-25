@@ -12,7 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 ################################
 
 BOT_TOKEN=os.getenv("BOT_TOKEN")
-CHAT_ID=os.getenv("CHAT_ID")
+CHAT_ID=str(os.getenv("CHAT_ID"))
 
 
 def kirim(msg):
