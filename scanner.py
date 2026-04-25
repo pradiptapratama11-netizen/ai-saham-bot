@@ -1,11 +1,39 @@
 import yfinance as yf
 import pandas as pd
-from ta.trend import IchimokuIndicator
-from sklearn.ensemble import RandomForestClassifier
+import requests
 import os
 
-BOT_TOKEN=os.getenv("8104665909:AAFwSwb0V-XZKm_Fvpu1RIIURr0bquA-SYE")
-CHAT_ID=os.getenv("6839765393")
+from ta.trend import IchimokuIndicator
+from sklearn.ensemble import RandomForestClassifier
+
+
+################################
+# TELEGRAM FROM GITHUB SECRETS
+################################
+
+BOT_TOKEN=os.getenv("BOT_TOKEN")
+CHAT_ID=os.getenv("CHAT_ID")
+
+
+def kirim(msg):
+
+    url=f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    payload={
+      "chat_id":CHAT_ID,
+      "text":msg
+    }
+
+    r=requests.post(
+      url,
+      json=payload,
+      timeout=20
+    )
+
+    print(r.status_code)
+    print(r.text)
+
+
 
 stocks=pd.read_csv(
 "saham_list.csv",
@@ -13,9 +41,6 @@ header=None
 )[0].drop_duplicates().tolist()
 
 
-################################
-# Bluechip override
-################################
 
 quality_bluechips=[
 "BBCA.JK",
@@ -26,73 +51,78 @@ quality_bluechips=[
 ]
 
 
+
 def fundamental_score(stock):
 
-    try:
+ try:
 
-        tk=yf.Ticker(stock)
-        info=tk.info
+   tk=yf.Ticker(stock)
+   info=tk.info
 
-        pbv=info.get("priceToBook")
-        pe=info.get("trailingPE")
-        roe=info.get("returnOnEquity")
+   pbv=info.get("priceToBook")
+   pe=info.get("trailingPE")
+   roe=info.get("returnOnEquity")
 
-        score=3
+   score=3
 
-        if pbv and pbv<3:
-            score+=2
+   if pbv and pbv<3:
+      score+=2
 
-        if pe and pe<22:
-            score+=2
+   if pe and pe<22:
+      score+=2
 
-        if roe and roe>.12:
-            score+=3
+   if roe and roe>.12:
+      score+=3
 
-        return score
+   return score
 
-    except:
-        return 3
+ except:
+   return 3
+
 
 
 
 def ai_score(df):
 
-    try:
+ try:
 
-        d=df.copy()
+   d=df.copy()
 
-        d["ret"]=d.Close.pct_change()
-        d["ma20"]=d.Close.rolling(20).mean()
-        d["ma50"]=d.Close.rolling(50).mean()
+   d["ret"]=d.Close.pct_change()
+   d["ma20"]=d.Close.rolling(20).mean()
+   d["ma50"]=d.Close.rolling(50).mean()
 
-        d=d.dropna()
+   d=d.dropna()
 
-        if len(d)<100:
-            return .5
+   if len(d)<100:
+      return .5
 
-        X=d[
-        ["Close","Volume","ma20","ma50"]
-        ]
 
-        y=(d.ret.shift(-5)>0).astype(int)
+   X=d[
+    ["Close","Volume","ma20","ma50"]
+   ]
 
-        m=RandomForestClassifier(
-            n_estimators=80
-        )
+   y=(d.ret.shift(-5)>0).astype(int)
 
-        m.fit(
-          X[:-1],
-          y[:-1]
-        )
 
-        p=m.predict_proba(
-          [X.iloc[-1]]
-        )[0][1]
+   model=RandomForestClassifier(
+      n_estimators=80
+   )
 
-        return p
+   model.fit(
+     X[:-1],
+     y[:-1]
+   )
 
-    except:
-        return .5
+   p=model.predict_proba(
+      [X.iloc[-1]]
+   )[0][1]
+
+   return p
+
+ except:
+   return .5
+
 
 
 
@@ -100,10 +130,10 @@ strong=[]
 watch=[]
 avoid=[]
 
-
 print(
-"V6.5 BIAS FIX ENGINE..."
+"V7 TELEGRAM ENGINE..."
 )
+
 
 
 for s in stocks:
@@ -126,20 +156,11 @@ for s in stocks:
    low=df.Low.squeeze()
    vol=df.Volume.squeeze()
 
+
    alpha=0
-
-
-   ###################
-   # FUNDAMENTAL
-   ###################
 
    alpha+=fundamental_score(s)
 
-
-
-   ###################
-   # ICHIMOKU
-   ###################
 
    ichi=IchimokuIndicator(
       high,
@@ -151,13 +172,9 @@ for s in stocks:
 
 
 
-   ###################
-   # RS
-   ###################
-
    rs=(
-      close.iloc[-1]/
-      close.iloc[-60]
+     close.iloc[-1]/
+     close.iloc[-60]
    )-1
 
    if rs>.05:
@@ -165,23 +182,14 @@ for s in stocks:
 
 
 
-   ###################
-   # ACCUMULATION
-   ###################
-
-   if vol.tail(5).mean() > vol.tail(20).mean():
+   if vol.tail(5).mean()>vol.tail(20).mean():
       alpha+=3
 
 
 
-   ###################
-   # AI
-   ###################
-
    prob=ai_score(df)
 
    alpha+=int(prob*6)
-
 
 
    conf=round(
@@ -190,10 +198,6 @@ for s in stocks:
    )
 
 
-
-   ###################
-   # GRADE
-   ###################
 
    if conf>25:
       grade="A+"
@@ -209,18 +213,13 @@ for s in stocks:
 
 
 
-   ###################
-   # BIAS FIX CLASSIFY
-   ###################
-
    if (
       prob<0.25
       and rs<0
       and s not in quality_bluechips
    ):
-
       avoid.append(
-         (s,prob)
+        (s,prob)
       )
 
 
@@ -228,13 +227,12 @@ for s in stocks:
       s in quality_bluechips
       and conf>18
    ):
-
       watch.append(
-         (
-          s,
-          conf,
-          "QualityOverride"
-         )
+       (
+        s,
+        conf,
+        "QualityOverride"
+       )
       )
 
 
@@ -272,42 +270,26 @@ key=lambda x:x[1],
 reverse=True
 )
 
-watch=sorted(
-watch,
-key=lambda x:x[1],
-reverse=True
-)
 
 
+################################
+# TELEGRAM MESSAGE
+################################
 
-print("\n🔥 STRONG BUY\n")
+msg="🔥 DAILY INSTITUTIONAL PICKS\n\n"
 
 for x in strong[:10]:
 
- print(
-   x[0],
-   "| Conf",x[1],
-   "|",x[2]
+ line=(
+  f"{x[0]} "
+  f"| Conf {x[1]} "
+  f"| {x[2]}"
  )
 
+ print(line)
 
-print("\n👀 WATCHLIST\n")
-
-for x in watch[:10]:
-
- print(
-   x[0],
-   "| Conf",x[1],
-   "|",x[2]
- )
+ msg+=line+"\n"
 
 
-print("\n⚠ AVOID\n")
 
-for x in avoid[:10]:
-
- print(
-   x[0],
-   "| Prob",
-   round(x[1],2)
- )
+kirim(msg)
