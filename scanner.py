@@ -17,6 +17,9 @@ CHAT_ID=str(os.getenv("CHAT_ID"))
 
 def kirim(msg):
 
+    print(BOT_TOKEN)
+    print(CHAT_ID)
+
     url=f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
     payload={
