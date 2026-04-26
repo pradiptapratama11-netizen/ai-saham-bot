@@ -7,50 +7,33 @@ from ta.trend import IchimokuIndicator
 from sklearn.ensemble import RandomForestClassifier
 
 
-################################
-# TELEGRAM FROM GITHUB SECRETS
-################################
+##################################
+# TELEGRAM
+##################################
 
-BOT_TOKEN="8104665909:AAFwSwb0V-XZKm_Fvpu1RIIURr0bquA-SYE"
-CHAT_ID="6839765393"
-import requests
-
-r=requests.post(
-f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-json={
-"chat_id":CHAT_ID,
-"text":"TEST GITHUB BOT"
-}
-)
-
-print(r.status_code)
-print(r.text)
-
-raise SystemExit("HELLO TEST")
+BOT_TOKEN=os.environ["BOT_TOKEN"]
+CHAT_ID=os.environ["CHAT_ID"]
 
 
 def kirim(msg):
 
-    print(BOT_TOKEN)
-    print(CHAT_ID)
-
-    url=f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-
-    payload={
-      "chat_id":CHAT_ID,
-      "text":msg
-    }
-
-    r=requests.post(
-      url,
-      json=payload,
-      timeout=20
+    r=requests.get(
+      f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+      params={
+       "chat_id":CHAT_ID,
+       "text":msg
+      },
+      timeout=30
     )
 
-    print(r.status_code)
+    print("TELEGRAM STATUS:",r.status_code)
     print(r.text)
 
 
+
+##################################
+# STOCK UNIVERSE
+##################################
 
 stocks=pd.read_csv(
 "saham_list.csv",
@@ -68,6 +51,10 @@ quality_bluechips=[
 ]
 
 
+
+##################################
+# FUNDAMENTAL
+##################################
 
 def fundamental_score(stock):
 
@@ -99,6 +86,10 @@ def fundamental_score(stock):
 
 
 
+##################################
+# AI
+##################################
+
 def ai_score(df):
 
  try:
@@ -116,22 +107,22 @@ def ai_score(df):
 
 
    X=d[
-    ["Close","Volume","ma20","ma50"]
+   ["Close","Volume","ma20","ma50"]
    ]
 
    y=(d.ret.shift(-5)>0).astype(int)
 
 
-   model=RandomForestClassifier(
+   m=RandomForestClassifier(
       n_estimators=80
    )
 
-   model.fit(
-     X[:-1],
-     y[:-1]
+   m.fit(
+      X[:-1],
+      y[:-1]
    )
 
-   p=model.predict_proba(
+   p=m.predict_proba(
       [X.iloc[-1]]
    )[0][1]
 
@@ -143,14 +134,15 @@ def ai_score(df):
 
 
 
+##################################
+# ENGINE
+##################################
+
 strong=[]
-watch=[]
-avoid=[]
 
 print(
-"V7 TELEGRAM ENGINE..."
+"V8 CLOUD SIGNAL ENGINE..."
 )
-
 
 
 for s in stocks:
@@ -188,20 +180,17 @@ for s in stocks:
       alpha+=3
 
 
-
    rs=(
-     close.iloc[-1]/
-     close.iloc[-60]
+      close.iloc[-1]/
+      close.iloc[-60]
    )-1
 
    if rs>.05:
       alpha+=3
 
 
-
    if vol.tail(5).mean()>vol.tail(20).mean():
       alpha+=3
-
 
 
    prob=ai_score(df)
@@ -213,7 +202,6 @@ for s in stocks:
       alpha*(1+prob),
       1
    )
-
 
 
    if conf>25:
@@ -235,43 +223,17 @@ for s in stocks:
       and rs<0
       and s not in quality_bluechips
    ):
-      avoid.append(
-        (s,prob)
-      )
+      continue
 
 
-   elif (
-      s in quality_bluechips
-      and conf>18
-   ):
-      watch.append(
+   if conf>=21:
+
+      strong.append(
        (
         s,
         conf,
-        "QualityOverride"
+        grade
        )
-      )
-
-
-   elif conf>=21:
-
-      strong.append(
-        (
-         s,
-         conf,
-         grade
-        )
-      )
-
-
-   else:
-
-      watch.append(
-        (
-         s,
-         conf,
-         grade
-        )
       )
 
 
@@ -289,26 +251,23 @@ reverse=True
 
 
 
-################################
-# TELEGRAM MESSAGE
-################################
+##################################
+# TELEGRAM SIGNAL
+##################################
 
 msg="🔥 DAILY INSTITUTIONAL PICKS\n\n"
 
-for x in strong[:10]:
+for x in strong[:5]:
 
  line=(
-  f"{x[0]} "
-  f"| Conf {x[1]} "
-  f"| {x[2]}"
+   f"{x[0]} "
+   f"| Conf {x[1]} "
+   f"| {x[2]}"
  )
 
  print(line)
 
  msg+=line+"\n"
 
-
-print("sending telegram...")
-print(msg)
 
 kirim(msg)
